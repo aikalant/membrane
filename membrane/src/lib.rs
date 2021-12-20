@@ -129,6 +129,8 @@ pub struct Meta {
   pub args: String,
   pub return_type: String,
   pub error_type: String,
+  pub return_deserializer: String,
+  pub error_deserializer: String,
   pub is_stream: bool,
 }
 
@@ -418,13 +420,33 @@ impl<'a> Membrane {
       .values()
       .flat_map(|functions| {
         functions
-          .into_iter()
+          .iter()
           .map(|function| Meta {
             name: function.fn_name.clone(),
             namespace: function.namespace.clone(),
             args: function.dart_outer_params.clone(),
             return_type: function.return_type.clone(),
             error_type: function.error_type.clone(),
+            return_deserializer: function.deserializer(
+              function.return_type.as_str(),
+              self
+                .namespaced_registry
+                .get(&function.namespace)
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+              self,
+            ),
+            error_deserializer: function.deserializer(
+              function.error_type.as_str(),
+              self
+                .namespaced_registry
+                .get(&function.namespace)
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+              self,
+            ),
             is_stream: function.is_stream,
           })
           .collect::<Vec<Meta>>()
