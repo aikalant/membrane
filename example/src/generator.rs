@@ -12,6 +12,9 @@ fn main() {
     .write_c_headers()
     .write_bindings();
 
+  // print out information about traced functions
+  project.get_function_meta();
+
   let _ = std::fs::create_dir_all("../dart_example/bin");
   let _ = std::fs::write("../dart_example/bin/dart_example.dart", RUNNABLE_EXAMPLE);
 }

@@ -287,3 +287,59 @@ pub fn dart_enum(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
   variants
 }
+
+#[derive(Debug)]
+struct ReprDartClass {
+  name: Ident,
+}
+
+impl Parse for ReprDartClass {
+  fn parse(input: ParseStream) -> Result<Self> {
+    // parse and discard any other macros so that we can get to the class
+    let _ = input.call(syn::Attribute::parse_outer);
+    let item_class = input.parse::<syn::ItemStruct>()?;
+
+    Ok(ReprDartClass {
+      name: item_class.ident,
+    })
+  }
+}
+
+///
+/// An auxilary macro for generating standalone Dart classes from Rust. _Most projects
+/// will not use this macro_, prefer using `async_dart` and letting Membrane generate
+/// the needed classes from the function return types. `dart_class` is useful in a project
+/// which is using Membrane for it's FFI functionality but also wants to keep some unrelated
+/// Dart classes in sync with Rust structs - possibly for out-of-band calls to a web server or similar.
+#[proc_macro_attribute]
+pub fn dart_class(attrs: TokenStream, input: TokenStream) -> TokenStream {
+  let ReprDartAttrs { namespace } = parse_macro_input!(attrs as ReprDartAttrs);
+
+  let mut variants = TokenStream::new();
+  variants.extend(input.clone());
+
+  let ReprDartClass { name } = parse_macro_input!(input as ReprDartClass);
+
+  let _deferred_trace = quote! {
+      ::membrane::inventory::submit! {
+          #![crate = ::membrane]
+          ::membrane::DeferredClassTrace {
+              namespace: #namespace.to_string(),
+              trace: |
+                tracer: &mut ::membrane::serde_reflection::Tracer
+              | {
+                  tracer.trace_simple_type::<#name>().unwrap();
+              }
+          }
+      }
+  };
+
+  // by default only enable tracing in the dev profile or with an explicit flag
+  #[cfg(all(
+    any(debug_assertions, feature = "generate"),
+    not(feature = "skip-generate")
+  ))]
+  variants.extend::<TokenStream>(_deferred_trace.into());
+
+  variants
+}

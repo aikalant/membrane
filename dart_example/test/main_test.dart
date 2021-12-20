@@ -153,4 +153,10 @@ void main() {
           [-94.130859375, 37.85750715625203]
         ]));
   });
+
+  test('can instantiate a custom class', () async {
+    final klass = CustomClass(name: "just a test", payload: List.from(["one"]));
+    expect(klass.toString(),
+        equals('CustomClass(name: just a test, payload: [one])'));
+  });
 }

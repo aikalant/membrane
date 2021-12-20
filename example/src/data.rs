@@ -1,6 +1,6 @@
 use std::default::Default;
 
-use membrane::dart_enum;
+use membrane::{dart_class, dart_enum};
 use serde::{Deserialize, Serialize};
 
 #[dart_enum(namespace = "accounts")]
@@ -76,4 +76,11 @@ pub struct MoreTypes {
 #[derive(Deserialize, Serialize)]
 pub struct Location {
   pub polyline_coords: Vec<(f64, f64)>,
+}
+
+#[dart_class(namespace = "accounts")]
+#[derive(Serialize, Deserialize)]
+pub struct CustomClass {
+  name: String,
+  payload: Vec<String>,
 }
