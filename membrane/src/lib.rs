@@ -100,6 +100,13 @@ pub struct Function {
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct Class {
+  pub namespace: String,
+  pub name: String,
+}
+
+#[doc(hidden)]
 pub struct DeferredTrace {
   pub function: Function,
   pub namespace: String,
@@ -114,6 +121,7 @@ pub struct DeferredEnumTrace {
 
 #[doc(hidden)]
 pub struct DeferredClassTrace {
+  pub class: Class,
   pub namespace: String,
   pub trace: fn(tracer: &mut serde_reflection::Tracer),
 }
@@ -134,6 +142,12 @@ pub struct Meta {
   pub is_stream: bool,
 }
 
+#[derive(Debug)]
+pub struct ClassMeta {
+  pub struct_name: String,
+  pub namespace: String,
+}
+
 pub struct Membrane {
   package_name: String,
   destination: PathBuf,
@@ -142,6 +156,7 @@ pub struct Membrane {
   namespaces: Vec<String>,
   namespaced_registry: HashMap<String, serde_reflection::Result<Registry>>,
   namespaced_fn_registry: HashMap<String, Vec<Function>>,
+  namespaced_class_registry: HashMap<String, Vec<Class>>,
   generated: bool,
   c_style_enums: bool,
 }
@@ -153,6 +168,7 @@ impl<'a> Membrane {
     let mut namespaced_registry = HashMap::new();
     let mut namespaced_samples = HashMap::new();
     let mut namespaced_fn_registry = HashMap::new();
+    let mut namespaced_class_registry = HashMap::new();
     for item in inventory::iter::<DeferredEnumTrace> {
       namespaces.push(item.namespace.clone());
 
@@ -171,6 +187,11 @@ impl<'a> Membrane {
         .or_insert_with(|| Tracer::new(TracerConfig::default()));
 
       (item.trace)(tracer);
+
+      namespaced_class_registry
+        .entry(item.namespace.clone())
+        .or_insert_with(Vec::new)
+        .push(item.class.clone());
     }
 
     for item in inventory::iter::<DeferredTrace> {
@@ -222,6 +243,7 @@ impl<'a> Membrane {
         .map(|(key, val)| (key, val.registry()))
         .collect(),
       namespaced_fn_registry,
+      namespaced_class_registry,
       namespaces,
       generated: false,
       c_style_enums: true,
@@ -410,6 +432,22 @@ impl<'a> Membrane {
     }
 
     self
+  }
+
+  pub fn get_classes_meta(&mut self) -> Vec<ClassMeta> {
+    self
+      .namespaced_class_registry
+      .values()
+      .flat_map(|classes| {
+        classes
+          .iter()
+          .map(|class| ClassMeta {
+            namespace: class.namespace.clone(),
+            struct_name: class.name.clone(),
+          })
+          .collect::<Vec<ClassMeta>>()
+      })
+      .collect::<Vec<ClassMeta>>()
   }
 
   ///

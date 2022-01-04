@@ -320,10 +320,16 @@ pub fn dart_class(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
   let ReprDartClass { name } = parse_macro_input!(input as ReprDartClass);
 
+  let struct_name = name.to_string();
+
   let _deferred_trace = quote! {
       ::membrane::inventory::submit! {
           #![crate = ::membrane]
           ::membrane::DeferredClassTrace {
+              class: ::membrane::Class {
+                namespace: #namespace.to_string(),
+                name: #struct_name.to_string(),
+              },
               namespace: #namespace.to_string(),
               trace: |
                 tracer: &mut ::membrane::serde_reflection::Tracer
